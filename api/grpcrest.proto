@@ -1,6 +1,6 @@
 syntax = "proto3";
 package grpcrest;
-option go_package = "grpcrest";
+option go_package = "./pbgen";
 
 import "user.proto";
 import "googleapis/google/api/annotations.proto";
@@ -22,7 +22,7 @@ service UserService {
 }
 
 message CreateUserRequest {
-  com.example.user.model.v1.UserWrite user = 1;
+  grpcrest.UserWrite user = 1;
 }
 
 message CreateUserResponse {
@@ -34,5 +34,5 @@ message GetUserRequest {
 }
 
 message GetUserResponse {
-  com.example.user.model.v1.UserRead user = 1;
+  grpcrest.UserRead user = 1;
 }

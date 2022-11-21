@@ -1,6 +1,6 @@
 syntax = "proto3";
 package grpcrest;
-option go_package = "grpcrest";
+option go_package = "./pbgen";
 
 message UserWrite {
   string name = 1;
