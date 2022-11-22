@@ -1,9 +1,8 @@
 package logger
 
 import (
-	"fmt"
 	"grpcrest/pkg/config"
-	"strings"
+	"grpcrest/pkg/logger/zerolog"
 )
 
 type Logger interface {
@@ -13,38 +12,6 @@ type Logger interface {
 	Debug(string, map[string]any)
 }
 
-type logger struct {
-	level string
-}
-
-func New(cfg config.Config) (Logger, error) {
-	lvl := strings.ToLower(cfg.Logger().Level())
-
-	switch lvl {
-	case "error":
-		fallthrough
-	case "debug":
-	default:
-		return nil, fmt.Errorf("invalid log level: %s", lvl)
-	}
-
-	return &logger{
-		level: lvl,
-	}, nil
-}
-
-func (l *logger) Fatal(err error, md map[string]any) {
-
-}
-
-func (l *logger) Error(err error, md map[string]any) {
-
-}
-
-func (l *logger) Info(msg string, md map[string]any) {
-
-}
-
-func (l *logger) Debug(msg string, md map[string]any) {
-
+func New(cfg config.Logger) (Logger, error) {
+	return zerolog.New(cfg)
 }
