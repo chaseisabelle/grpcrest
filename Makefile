@@ -1,12 +1,9 @@
 generate:
 	docker run --rm -it -v ${PWD}:/defs namely/protoc-all:latest -d api -o gen -l go --with-gateway
 
-ungenerate:
-	rm -rf gen/*
-
 regenerate:
-	make ungenerate
+	rm -rf gen/*
 	make generate
 
 googleapis:
-	cd api && git clone https://github.com/googleapis/googleapis.git
+	docker run -it --rm -v ${PWD}/api:/git alpine/git clone https://github.com/googleapis/googleapis.git
