@@ -15,8 +15,7 @@ import (
 )
 
 type Server interface {
-	Serve() error
-	Shutdown(context.Context) error
+	Serve(context.Context) error
 }
 
 type server struct {
@@ -45,31 +44,56 @@ func New(cfg config.Config, lgr logger.Logger, ser service.Service) (Server, err
 	}, nil
 }
 
-func (s *server) Serve() error {
-	ctx, cxl := context.WithCancel(context.Background())
-
-	go func(cxl context.CancelFunc) {
-		chn := make(chan os.Signal, 1)
-
-		signal.Notify(chn, os.Interrupt, syscall.SIGTERM)
-
-		<-chn
-
-		cxl()
-	}(cxl)
-
-	eg, gCtx := errgroup.WithContext(ctx)
-
-	eg.Go(func() error {
-		return s.grpc.Serve()
-	})
-
-	eg.Go(func() error {
-		<-gCtx.Done()
-		return httpServer.Shutdown(context.Background())
-	})
-
-	if err := eg.Wait(); err != nil {
-		fmt.Printf("exit reason: %s \n", err)
+func (s *server) Serve(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
 	}
+
+	ctx, cxl := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	defer cxl()
+
+	geg, gcx := errgroup.WithContext(ctx)
+	reg, rcx := errgroup.WithContext(ctx)
+
+	geg.Go(func() error {
+		return s.grpc.Serve(ctx)
+	})
+
+	reg.Go(func() error {
+		return s.rest.Serve(ctx)
+	})
+
+	geg.Go(func() error {
+		<-gcx.Done()
+
+		return nil
+	})
+
+	reg.Go(func() error {
+		<-rcx.Done()
+
+		return nil
+	})
+
+	ge := geg.Wait()
+	re := reg.Wait()
+
+	if ge != nil {
+		ge = fmt.Errorf("server failure: %w", ge)
+
+		s.logger.Error(ge, nil)
+	}
+
+	if re != nil {
+		re = fmt.Errorf("server failure: %w", re)
+
+		s.logger.Error(re, nil)
+	}
+
+	if ge != nil {
+		return ge
+	}
+
+	return re
 }

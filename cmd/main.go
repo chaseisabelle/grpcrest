@@ -21,6 +21,8 @@ func main() {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
 
+	lgr.Info("hello!", nil)
+
 	ser, err := service.New(lgr)
 
 	if err != nil {
@@ -33,9 +35,11 @@ func main() {
 		lgr.Fatal(fmt.Errorf("failed to initialize server: %w", err), nil)
 	}
 
-	err = srv.Serve()
+	err = srv.Serve(nil)
 
 	if err != nil {
 		lgr.Fatal(fmt.Errorf("failed to start server: %w", err), nil)
 	}
+
+	lgr.Info("toodles!", nil)
 }

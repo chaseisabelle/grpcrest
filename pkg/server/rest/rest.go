@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"golang.org/x/sync/errgroup"
 	"grpcrest/gen/pbgen"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
@@ -13,7 +14,7 @@ import (
 )
 
 type REST struct {
-	server  *http.ServeMux
+	server  *http.Server
 	config  config.Server
 	logger  logger.Logger
 	service service.Service
@@ -27,34 +28,76 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, erro
 
 	err := pbgen.RegisterUserServiceHandlerServer(context.Background(), rmx, ser)
 
-	http.Server{
+	if err != nil {
+		return nil, fmt.Errorf("failed to register service handler: %w", err)
+	}
+
+	srv := &http.Server{
 		Handler: mux,
 	}
 
 	return &REST{
-		server:  mux,
+		server:  srv,
 		config:  cfg,
 		logger:  lgr,
 		service: ser,
-	}, err
+	}, nil
 }
 
-func (r *REST) Serve() error {
-	lis, err := net.Listen("tcp", r.config.Address())
-
-	if err != nil {
-		return fmt.Errorf("failed to listen on tcp address %s: %w", r.config.Address(), err)
+func (r *REST) Serve(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
-	err = http.Serve(lis, r.server)
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		adr := r.config.Address()
+		lmd := map[string]any{
+			"network": "tcp",
+			"address": adr,
+		}
+
+		r.logger.Info("starting rest server", lmd)
+
+		lis, err := net.Listen("tcp", adr)
+
+		if err != nil {
+			return fmt.Errorf("rest server listener failure: %w", err)
+		}
+
+		r.server.BaseContext = func(_ net.Listener) context.Context {
+			return ctx
+		}
+
+		err = r.server.Serve(lis)
+
+		if err != nil && err != http.ErrServerClosed {
+			err = fmt.Errorf("failed to start rest server: %w", err)
+		} else {
+			err = nil
+		}
+
+		return err
+	})
+
+	eg.Go(func() error {
+		<-ctx.Done()
+
+		err := r.server.Shutdown(context.Background())
+
+		if err != nil {
+			err = fmt.Errorf("failed to gracefully shutdown rest server: %w", err)
+		}
+
+		return err
+	})
+
+	err := eg.Wait()
 
 	if err != nil {
-		err = fmt.Errorf("failed to start rest server: %w", err)
+		err = fmt.Errorf("rest server failure: %w", err)
 	}
 
 	return err
-}
-
-func (r *REST) Shutdown(ctx context.Context) error {
-	return
 }
