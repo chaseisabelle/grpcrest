@@ -1,0 +1,8 @@
+syntax = "proto3";
+package grpcrest;
+option go_package = "./pbgen";
+
+message User {
+  string id = 1;
+  string name = 2;
+}

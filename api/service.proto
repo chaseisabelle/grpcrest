@@ -1,0 +1,22 @@
+syntax = "proto3";
+package grpcrest;
+option go_package = "./pbgen";
+
+import "request.proto";
+import "response.proto";
+import "model.proto";
+import "googleapis/google/api/annotations.proto";
+
+service Service {
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    option (google.api.http) = {
+      post: "/user"
+      body: "user"
+    };
+  }
+  rpc Read(ReadRequest) returns (ReadResponse) {
+    option (google.api.http) = {
+      get: "/user"
+    };
+  }
+}
