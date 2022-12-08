@@ -7,10 +7,14 @@ generate:
 		--with-gateway \
 		--grpc-gateway_opt generate_unbound_methods=true
 
+extensions:
+	make googleapis
+	make grpc-gateway
+
 googleapis:
-	rm ${PWD}/api/googleapis
+	rm -rf ${PWD}/api/googleapis
 	docker run -it --rm -v ${PWD}/api:/git alpine/git clone https://github.com/googleapis/googleapis.git
 
 grpc-gateway:
-	rm ${PWD}/api/grpc-gateway
+	rm -rf ${PWD}/api/grpc-gateway
 	docker run -it --rm -v ${PWD}/api:/git alpine/git clone https://github.com/grpc-ecosystem/grpc-gateway.git
