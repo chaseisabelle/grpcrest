@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0
-	github.com/pseidemann/finish v1.2.0
 	github.com/rs/zerolog v1.28.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/api v0.103.0

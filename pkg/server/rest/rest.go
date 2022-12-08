@@ -26,7 +26,7 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, erro
 
 	mux.Handle("/", rmx)
 
-	err := pbgen.RegisterUserServiceHandlerServer(context.Background(), rmx, ser)
+	err := pbgen.RegisterServiceHandlerServer(context.Background(), rmx, ser)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to register service handler: %w", err)
@@ -84,10 +84,14 @@ func (r *REST) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
+		r.logger.Info("stopping rest server", nil)
+
 		err := r.server.Shutdown(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("failed to gracefully shutdown rest server: %w", err)
+		} else {
+			r.logger.Info("stopped rest server", nil)
 		}
 
 		return err

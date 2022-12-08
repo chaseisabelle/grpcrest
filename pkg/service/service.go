@@ -6,7 +6,7 @@ import (
 	"grpcrest/pkg/logger"
 )
 
-type Service pbgen.UserServiceServer
+type Service pbgen.ServiceServer
 
 type service struct {
 	logger logger.Logger
@@ -18,18 +18,17 @@ func New(lgr logger.Logger) (Service, error) {
 	}, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, req *pbgen.CreateUserRequest) (*pbgen.CreateUserResponse, error) {
-	return &pbgen.CreateUserResponse{
-		Id: "todo",
+func (s *service) Create(ctx context.Context, req *pbgen.CreateRequest) (*pbgen.CreateResponse, error) {
+	return &pbgen.CreateResponse{
+		Id: 1,
 	}, nil
 }
 
-func (s *service) GetUser(ctx context.Context, req *pbgen.GetUserRequest) (*pbgen.GetUserResponse, error) {
-	return &pbgen.GetUserResponse{
-		User: &pbgen.UserRead{
-			Id:   req.Id,
-			Name: "todo",
-			Type: pbgen.UserType_USER_TYPE_ADMIN,
+func (s *service) Read(ctx context.Context, req *pbgen.ReadRequest) (*pbgen.ReadResponse, error) {
+	return &pbgen.ReadResponse{
+		Model: &pbgen.Model{
+			Id:   1,
+			Name: "test",
 		},
 	}, nil
 }

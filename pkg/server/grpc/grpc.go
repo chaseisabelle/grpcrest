@@ -22,7 +22,7 @@ type GRPC struct {
 func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*GRPC, error) {
 	srv := grpc.NewServer()
 
-	pbgen.RegisterUserServiceServer(srv, ser)
+	pbgen.RegisterServiceServer(srv, ser)
 
 	return &GRPC{
 		server:  srv,
@@ -68,7 +68,9 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
+		g.logger.Info("stopping grpc server", nil)
 		g.server.GracefulStop()
+		g.logger.Info("stopped grpc server", nil)
 
 		return nil
 	})
