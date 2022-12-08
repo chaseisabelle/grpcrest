@@ -2,21 +2,48 @@ syntax = "proto3";
 package grpcrest;
 option go_package = "./pbgen";
 
-import "request.proto";
-import "response.proto";
-import "model.proto";
 import "googleapis/google/api/annotations.proto";
+import "grpc-gateway/protoc-gen-openapiv2/options/annotations.proto";
 
 service Service {
   rpc Create(CreateRequest) returns (CreateResponse) {
     option (google.api.http) = {
       post: "/user"
-      body: "user"
+      body: "*"
     };
   }
   rpc Read(ReadRequest) returns (ReadResponse) {
     option (google.api.http) = {
       get: "/user"
     };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {
+          key: "oauth2"
+          value: {}
+        }
+      }
+    };
   }
+}
+
+message CreateRequest {
+  string name = 1;
+}
+
+message ReadRequest {
+  string id = 1;
+}
+
+message CreateResponse {
+  uint32 id = 1;
+}
+
+message ReadResponse {
+  Model model = 1;
+}
+
+message Model {
+  uint32 id = 1;
+  string name  = 2;
 }

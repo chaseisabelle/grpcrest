@@ -23,6 +23,7 @@ func New() (Config, error) {
 	ga := *fs.String("grpc-address", ":3333", "grpc server address")
 	ra := *fs.String("rest-address", ":8080", "rest server address")
 	ll := *fs.String("log-level", "debug", "log level")
+	ls := *fs.Bool("log-stack", false, "log stack trace with errors")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -37,6 +38,7 @@ func New() (Config, error) {
 		},
 		logger: &logger{
 			level: ll,
+			stack: ls,
 		},
 	}, nil
 }
