@@ -19,8 +19,11 @@ service Service {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       security: {
         security_requirement: {
-          key: "oauth2"
-          value: {}
+          key: "OAuth2"
+          value: {
+            scope: "read";
+            scope: "write";
+          }
         }
       }
     };

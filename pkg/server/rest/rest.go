@@ -22,7 +22,10 @@ type REST struct {
 
 func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, error) {
 	mux := http.NewServeMux()
-	rmx := runtime.NewServeMux()
+	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
+		fmt.Printf("%s\n", hdr)
+		return "poop", true
+	}))
 
 	mux.Handle("/", rmx)
 
