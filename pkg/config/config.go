@@ -20,10 +20,10 @@ type config struct {
 func New() (Config, error) {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 
-	ga := *fs.String("grpc-address", ":3333", "grpc server address")
-	ra := *fs.String("rest-address", ":8080", "rest server address")
-	ll := *fs.String("log-level", "debug", "log level")
-	ls := *fs.Bool("log-stack", false, "log stack trace with errors")
+	ga := fs.String("grpc-address", ":3333", "grpc server address")
+	ra := fs.String("rest-address", ":8080", "rest server address")
+	ll := fs.String("log-level", "debug", "log level")
+	ls := fs.Bool("log-stack", false, "log stack trace with errors")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -31,14 +31,14 @@ func New() (Config, error) {
 
 	return &config{
 		grpc: &server{
-			address: ga,
+			address: *ga,
 		},
 		rest: &server{
-			address: ra,
+			address: *ra,
 		},
 		logger: &logger{
-			level: ll,
-			stack: ls,
+			level: *ll,
+			stack: *ls,
 		},
 	}, nil
 }

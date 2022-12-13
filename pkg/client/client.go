@@ -12,13 +12,13 @@ type Client interface {
 	Open() error
 	Close() error
 	Reopen() error
-	Service() (pbgen.UserServiceClient, error)
+	Service() (pbgen.ServiceClient, error)
 }
 
 type client struct {
 	config     Config
 	mutex      sync.Mutex
-	service    pbgen.UserServiceClient
+	service    pbgen.ServiceClient
 	connection *grpc.ClientConn
 }
 
@@ -46,7 +46,7 @@ func (c *client) Open() error {
 		return fmt.Errorf("failed to connect grpc client: %w", err)
 	}
 
-	c.service = pbgen.NewUserServiceClient(con)
+	c.service = pbgen.NewServiceClient(con)
 	c.connection = con
 
 	return nil
@@ -86,7 +86,7 @@ func (c *client) Reopen() error {
 	return err
 }
 
-func (c *client) Service() (pbgen.UserServiceClient, error) {
+func (c *client) Service() (pbgen.ServiceClient, error) {
 	c.mutex.Lock()
 
 	defer c.mutex.Unlock()
