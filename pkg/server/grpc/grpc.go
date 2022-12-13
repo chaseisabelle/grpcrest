@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"grpcrest/gen/pbgen"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
@@ -20,7 +21,7 @@ type GRPC struct {
 }
 
 func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*GRPC, error) {
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.UnaryInterceptor(auth))
 
 	pbgen.RegisterServiceServer(srv, ser)
 
@@ -82,4 +83,14 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	}
 
 	return err
+}
+
+//--------- @todo move to dedicated package
+
+func auth(ctx context.Context, req any, usi *grpc.UnaryServerInfo, han grpc.UnaryHandler) (any, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+
+	fmt.Printf("%+v\n%+v\n", ok, md)
+
+	return han(ctx, req)
 }

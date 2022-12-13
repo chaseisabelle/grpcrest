@@ -12,6 +12,6 @@ type Logger interface {
 	Debug(string, map[string]any)
 }
 
-func New(cfg config.Logger) (Logger, error) {
+func New(cfg config.Config) (Logger, error) {
 	return zerolog.New(cfg)
 }

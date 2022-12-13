@@ -15,13 +15,11 @@ func main() {
 		panic(fmt.Errorf("failed to initialize configurations: %w", err))
 	}
 
-	lgr, err := logger.New(cfg.Logger())
+	lgr, err := logger.New(cfg)
 
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
-
-	lgr.Info("hello!", nil)
 
 	ser, err := service.New(lgr)
 
@@ -40,6 +38,4 @@ func main() {
 	if err != nil {
 		lgr.Fatal(fmt.Errorf("failed to start server: %w", err), nil)
 	}
-
-	lgr.Info("toodles!", nil)
 }
