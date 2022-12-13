@@ -10,11 +10,11 @@ generate:
 
 .PHONY: clone
 clone:
-	@if [[ "${dir}" == "" || "${url}" == "" ]]; then echo "make clone dir=/path/on/host/machine url=https://github.com/repo"; exit 1; fi
+	@if [[ "${dir}" == "" || "${url}" == "" ]]; then echo "usage: make clone dir=/path/on/host/machine url=https://github.com/repo"; exit 1; fi
 	docker run -it --rm -v ${dir}:/git alpine/git clone ${url}
 
-.PHONT: extensions
-extensions:
+.PHONT: plugins
+plugins:
 	make googleapis
 	make grpc-gateway
 
