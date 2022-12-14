@@ -34,6 +34,12 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*GRPC, erro
 }
 
 func (g *GRPC) Serve(ctx context.Context) error {
+	adr := g.config.Address()
+	lmd := map[string]any{
+		"network": "tcp",
+		"address": adr,
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -41,12 +47,6 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		adr := g.config.Address()
-		lmd := map[string]any{
-			"network": "tcp",
-			"address": adr,
-		}
-
 		g.logger.Info("starting grpc server", lmd)
 
 		lis, err := net.Listen("tcp", adr)
@@ -69,9 +69,16 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
-		g.logger.Info("stopping grpc server", nil)
+		g.logger.Info("stopping grpc server", lmd)
+
+		err := ctx.Err()
+
+		if err != nil && err != context.Canceled {
+			g.logger.Error(fmt.Errorf("grpc server context error: %w", err), lmd)
+		}
+
 		g.server.GracefulStop()
-		g.logger.Info("stopped grpc server", nil)
+		g.logger.Info("stopped grpc server", lmd)
 
 		return nil
 	})

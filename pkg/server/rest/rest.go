@@ -22,6 +22,7 @@ type REST struct {
 
 func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, error) {
 	mux := http.NewServeMux()
+
 	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
 		fmt.Printf("%s\n", hdr)
 		return "poop", true
@@ -48,6 +49,12 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, erro
 }
 
 func (r *REST) Serve(ctx context.Context) error {
+	adr := r.config.Address()
+	lmd := map[string]any{
+		"network": "tcp",
+		"address": adr,
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -55,12 +62,6 @@ func (r *REST) Serve(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		adr := r.config.Address()
-		lmd := map[string]any{
-			"network": "tcp",
-			"address": adr,
-		}
-
 		r.logger.Info("starting rest server", lmd)
 
 		lis, err := net.Listen("tcp", adr)
@@ -87,14 +88,20 @@ func (r *REST) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
-		r.logger.Info("stopping rest server", nil)
+		r.logger.Info("stopping rest server", lmd)
 
-		err := r.server.Shutdown(context.Background())
+		err := ctx.Err()
+
+		if err != nil && err != context.Canceled {
+			r.logger.Error(fmt.Errorf("rest server context error: %w", err), lmd)
+		}
+
+		err = r.server.Shutdown(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("failed to gracefully shutdown rest server: %w", err)
 		} else {
-			r.logger.Info("stopped rest server", nil)
+			r.logger.Info("stopped rest server", lmd)
 		}
 
 		return err
