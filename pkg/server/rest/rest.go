@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"grpcrest/gen/pbgen"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
@@ -20,17 +22,18 @@ type REST struct {
 	service service.Service
 }
 
-func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, error) {
+func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*REST, error) {
 	mux := http.NewServeMux()
 
 	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
-		fmt.Printf("%s\n", hdr)
-		return "poop", true
+		return hdr, true
 	}))
 
 	mux.Handle("/", rmx)
 
-	err := pbgen.RegisterServiceHandlerServer(context.Background(), rmx, ser)
+	err := pbgen.RegisterServiceHandlerFromEndpoint(context.Background(), rmx, cfg.GRPC().Address(), []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to register service handler: %w", err)
@@ -42,7 +45,7 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, erro
 
 	return &REST{
 		server:  srv,
-		config:  cfg,
+		config:  cfg.REST(),
 		logger:  lgr,
 		service: ser,
 	}, nil

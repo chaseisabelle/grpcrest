@@ -25,13 +25,13 @@ type server struct {
 }
 
 func New(cfg config.Config, lgr logger.Logger, ser service.Service) (Server, error) {
-	rpc, err := grpc.New(cfg.GRPC(), lgr, ser)
+	rpc, err := grpc.New(cfg, lgr, ser)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize grpc server: %w", err)
 	}
 
-	rst, err := rest.New(cfg.REST(), lgr, ser)
+	rst, err := rest.New(cfg, lgr, ser)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize rest server: %w", err)

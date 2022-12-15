@@ -20,14 +20,15 @@ type GRPC struct {
 	service service.Service
 }
 
-func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*GRPC, error) {
-	srv := grpc.NewServer(grpc.UnaryInterceptor(auth))
+func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*GRPC, error) {
+	uic := grpc.ChainUnaryInterceptor(auth)
+	srv := grpc.NewServer(uic)
 
 	pbgen.RegisterServiceServer(srv, ser)
 
 	return &GRPC{
 		server:  srv,
-		config:  cfg,
+		config:  cfg.GRPC(),
 		logger:  lgr,
 		service: ser,
 	}, nil
@@ -97,7 +98,7 @@ func (g *GRPC) Serve(ctx context.Context) error {
 func auth(ctx context.Context, req any, usi *grpc.UnaryServerInfo, han grpc.UnaryHandler) (any, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 
-	fmt.Printf("%+v\n%+v\n", ok, md)
+	fmt.Printf("intercepted: %+v\n%+v\n", ok, md)
 
 	return han(ctx, req)
 }
