@@ -43,7 +43,7 @@ built:
 
 .PHONY: build
 build:
-	@make built image="${name}" || docker build --no-cache --target "${name}" -t $(shell make image name=${name}) "images/${name}"
+	@make built image="${name}" || docker build --no-cache --target "${name}" -t $(shell make image name=${name}) .
 
 .PHONY: rebuild
 rebuild:
