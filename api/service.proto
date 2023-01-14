@@ -40,6 +40,12 @@ message ReadRequest {
 
 message CreateResponse {
   uint32 id = 1;
+  message Status200 {
+    string name = 1;
+  };
+  enum http_status {
+    ok = 200;
+  };
 }
 
 message ReadResponse {
