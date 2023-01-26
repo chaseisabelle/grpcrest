@@ -1,0 +1,26 @@
+[psql]
+  dbname    = "platform"
+  host      = "host.docker.internal"
+  port      = 5432
+  user      = "platform"
+  pass      = "password"
+  schema    = "public"
+  sslmode   = "disable"
+  blacklist = ["administrators", "classlink_integrations"]
+
+[mysql]
+  dbname  = "dbname"
+  host    = "localhost"
+  port    = 3306
+  user    = "dbusername"
+  pass    = "dbpassword"
+  sslmode = "false"
+
+[mssql]
+  dbname  = "dbname"
+  host    = "localhost"
+  port    = 1433
+  user    = "dbusername"
+  pass    = "dbpassword"
+  sslmode = "disable"
+  schema  = "notdbo"

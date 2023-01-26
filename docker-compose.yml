@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  service:
+    build:
+      context: .
+      target: service
+    image: chaseisabelle/service:local
+    container_name: platform
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    volumes:
+      - postgres:/var/lib/postresql/data
+    environment:
+      - POSTGRES_USER=platform
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=platform
+    ports:
+      - '5432:5432'
+  psql:
+    image: postgres:14
+    container_name: psql
+    command: psql --host postgres --port 5432 --username platform --dbname platform
+    profiles:
+      - donotstart
+    depends_on:
+      - postgres
+  tester:
+    image: golang
+    container_name: tester
+    working_dir: /workdir
+    command: go test -v --race --cover --coverprofile=../coverage.out ./...
+    volumes:
+      - .:/workdir
+    profiles:
+      - donotstart
+  coverer:
+    image: golang
+    container_name: coverer
+    working_dir: /workdir
+    command: go tool cover --func=../coverage.out
+    volumes:
+      - .:/workdir
+    profiles:
+      - donotstart
+  vetter:
+    image: golang
+    container_name: vetter
+    working_dir: /workdir
+    command: go vet -v --race ./...
+    volumes:
+      - .:/workdir
+    profiles:
+      - donotstart
+volumes:
+  postgres:

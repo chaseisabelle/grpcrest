@@ -65,3 +65,11 @@ message DeleteRequest {
 message DeleteResponse {
   int64 status = 1;
 }
+
+message ResponseMetadata {
+  int64 status = 1;
+}
+
+message ResponseError {
+
+}

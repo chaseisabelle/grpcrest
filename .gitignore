@@ -4,3 +4,4 @@ api/googleapis
 api/grpc-gateway
 gen
 api/service.swagger.yaml
+coverage.out

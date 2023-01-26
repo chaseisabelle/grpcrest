@@ -25,7 +25,24 @@ protoc:
 .PHONY: sqlboiler
 sqlboiler:
 	make build name=sqlboiler
-	docker run --rm -it -w /workdir -v ${PWD}:/workdir $(shell make image name=sqlboiler)
+	docker run --rm -it -w /workdir -v ${PWD}:/workdir $(shell make image name=sqlboiler) sqlboiler \
+		--config sql/sqlboiler.toml \
+		--output gen/db \
+		--pkgname db \
+		--wipe \
+		psql
+
+.PHONY: test
+test:
+	make run what=tester
+
+.PHONY: cover
+cover:
+	make run what=coverer
+
+.PHONY: vet
+vet:
+	make run what=vetter
 
 .PHONY: clone
 clone:
@@ -47,3 +64,7 @@ build:
 rebuild:
 	@docker rmi $(shell make image name=${name})
 	@make build name="${name}"
+
+.PHONY: run
+run:
+	docker compose run --rm -it ${what}
