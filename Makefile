@@ -1,29 +1,42 @@
-.PHONY: generate
-generate:
-	rm -rf gen/*
-	docker run --rm -it -v ${PWD}:/defs namely/protoc-all:latest \
-		-d api \
-		-o gen \
-		-l go \
-		--with-gateway \
-		--grpc-gateway_opt generate_unbound_methods=true
+.PHONY: plugins
+plugins:
+	make clone dir=${PWD}/api url=https://github.com/googleapis/googleapis.git
+	make clone dir=${PWD}/api url=https://github.com/grpc-ecosystem/grpc-gateway.git
+
+.PHONY: protoc
+protoc:
+	make build name=protoc
+	rm -rf gen/pb
+	mkdir gen/pb
+	docker run --rm -it -v ${PWD}:/workdir $(shell make image name=protoc) protoc \
+		-I api \
+		-I api/googleapis \
+		-I api/grpc-gateway \
+		--go_out gen/pb \
+		--go_opt paths=source_relative \
+		--go-grpc_out gen/pb \
+		--go-grpc_opt paths=source_relative,require_unimplemented_servers=false \
+		--grpc-gateway_out gen/pb \
+		--grpc-gateway_opt paths=source_relative,generate_unbound_methods=true \
+		api/service.proto
 
 .PHONY: clone
 clone:
-	@if [[ "${dir}" == "" || "${url}" == "" ]]; then echo "usage: make clone dir=/path/on/host/machine url=https://github.com/repo"; exit 1; fi
-	docker run -it --rm -v ${dir}:/git alpine/git clone ${url}
+	@docker run -it --rm -v ${dir}:/git alpine/git clone ${url}
 
-.PHONT: plugins
-plugins:
-	make googleapis
-	make grpc-gateway
+.PHONY: image
+image:
+	@echo "chaseisabelle/${name}:local"
 
-.PHONY: googleapis
-googleapis:
-	rm -rf ${PWD}/api/googleapis
-	make clone dir=${PWD}/api url=https://github.com/googleapis/googleapis.git
+.PHONY: built
+built:
+	@docker image inspect $(shell make image name="${name}") >/dev/null 2>&1
 
-.PHONY: grpc-gateway
-grpc-gateway:
-	rm -rf ${PWD}/api/grpc-gateway
-	make clone dir=${PWD}/api url=https://github.com/grpc-ecosystem/grpc-gateway.git
+.PHONY: build
+build:
+	@make built image="${name}" || docker build --no-cache --target "${name}" -t $(shell make image name=${name}) "images/${name}"
+
+.PHONY: rebuild
+rebuild:
+	@docker rmi $(shell make image name=${name})
+	@make build name="${name}"

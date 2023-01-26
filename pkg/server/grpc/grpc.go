@@ -6,7 +6,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"grpcrest/gen/pbgen"
+	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
 	"grpcrest/pkg/service"
@@ -20,20 +20,27 @@ type GRPC struct {
 	service service.Service
 }
 
-func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*GRPC, error) {
-	srv := grpc.NewServer(grpc.UnaryInterceptor(auth))
+func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*GRPC, error) {
+	uic := grpc.ChainUnaryInterceptor(auth)
+	srv := grpc.NewServer(uic)
 
-	pbgen.RegisterServiceServer(srv, ser)
+	pb.RegisterServiceServer(srv, ser)
 
 	return &GRPC{
 		server:  srv,
-		config:  cfg,
+		config:  cfg.GRPC(),
 		logger:  lgr,
 		service: ser,
 	}, nil
 }
 
 func (g *GRPC) Serve(ctx context.Context) error {
+	adr := g.config.Address()
+	lmd := map[string]any{
+		"network": "tcp",
+		"address": adr,
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -41,12 +48,6 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		adr := g.config.Address()
-		lmd := map[string]any{
-			"network": "tcp",
-			"address": adr,
-		}
-
 		g.logger.Info("starting grpc server", lmd)
 
 		lis, err := net.Listen("tcp", adr)
@@ -69,9 +70,16 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
-		g.logger.Info("stopping grpc server", nil)
+		g.logger.Info("stopping grpc server", lmd)
+
+		err := ctx.Err()
+
+		if err != nil && err != context.Canceled {
+			g.logger.Error(fmt.Errorf("grpc server context error: %w", err), lmd)
+		}
+
 		g.server.GracefulStop()
-		g.logger.Info("stopped grpc server", nil)
+		g.logger.Info("stopped grpc server", lmd)
 
 		return nil
 	})
@@ -90,7 +98,7 @@ func (g *GRPC) Serve(ctx context.Context) error {
 func auth(ctx context.Context, req any, usi *grpc.UnaryServerInfo, han grpc.UnaryHandler) (any, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 
-	fmt.Printf("%+v\n%+v\n", ok, md)
+	fmt.Printf("intercepted: %+v\n%+v\n", ok, md)
 
 	return han(ctx, req)
 }

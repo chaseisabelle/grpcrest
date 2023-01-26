@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
-	"grpcrest/gen/pbgen"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
 	"grpcrest/pkg/service"
@@ -20,16 +24,38 @@ type REST struct {
 	service service.Service
 }
 
-func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, error) {
+func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*REST, error) {
 	mux := http.NewServeMux()
+
 	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
-		fmt.Printf("%s\n", hdr)
-		return "poop", true
+		return hdr, true
+	}), runtime.WithForwardResponseOption(func(ctx context.Context, res http.ResponseWriter, msg proto.Message) error {
+		msg.ProtoReflect().Range(func(d protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+			if d.Name() != "status" {
+				return true
+			}
+
+			i := v.Interface()
+			s, ok := i.(int)
+
+			if !ok {
+				lgr.Error(fmt.Errorf("invalid status field value in grpc response"), map[string]any{
+					"value": i,
+				})
+			} else {
+				res.WriteHeader(s)
+			}
+
+			return false
+		})
+		return nil
 	}))
 
 	mux.Handle("/", rmx)
 
-	err := pbgen.RegisterServiceHandlerServer(context.Background(), rmx, ser)
+	err := pb.RegisterServiceHandlerFromEndpoint(context.Background(), rmx, cfg.GRPC().Address(), []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to register service handler: %w", err)
@@ -41,13 +67,19 @@ func New(cfg config.Server, lgr logger.Logger, ser service.Service) (*REST, erro
 
 	return &REST{
 		server:  srv,
-		config:  cfg,
+		config:  cfg.REST(),
 		logger:  lgr,
 		service: ser,
 	}, nil
 }
 
 func (r *REST) Serve(ctx context.Context) error {
+	adr := r.config.Address()
+	lmd := map[string]any{
+		"network": "tcp",
+		"address": adr,
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -55,12 +87,6 @@ func (r *REST) Serve(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		adr := r.config.Address()
-		lmd := map[string]any{
-			"network": "tcp",
-			"address": adr,
-		}
-
 		r.logger.Info("starting rest server", lmd)
 
 		lis, err := net.Listen("tcp", adr)
@@ -87,14 +113,20 @@ func (r *REST) Serve(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 
-		r.logger.Info("stopping rest server", nil)
+		r.logger.Info("stopping rest server", lmd)
 
-		err := r.server.Shutdown(context.Background())
+		err := ctx.Err()
+
+		if err != nil && err != context.Canceled {
+			r.logger.Error(fmt.Errorf("rest server context error: %w", err), lmd)
+		}
+
+		err = r.server.Shutdown(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("failed to gracefully shutdown rest server: %w", err)
 		} else {
-			r.logger.Info("stopped rest server", nil)
+			r.logger.Info("stopped rest server", lmd)
 		}
 
 		return err
