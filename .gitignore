@@ -1,4 +1,5 @@
 .idea
 .DS_Store
-api/proto
+api/googleapis
+api/grpc-gateway
 gen
