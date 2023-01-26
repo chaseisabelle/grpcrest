@@ -6,7 +6,7 @@ plugins:
 .PHONY: protoc
 protoc:
 	make build name=protoc
-	rm -rf gen/pb
+	rm -rf gen/pb api/service.swagger.yaml
 	mkdir gen/pb
 	docker run --rm -it -v ${PWD}:/workdir $(shell make image name=protoc) protoc \
 		-I api \
@@ -18,6 +18,8 @@ protoc:
 		--go-grpc_opt paths=source_relative,require_unimplemented_servers=false \
 		--grpc-gateway_out gen/pb \
 		--grpc-gateway_opt paths=source_relative,generate_unbound_methods=true \
+		--openapiv2_out api \
+		--openapiv2_opt logtostderr=true,use_go_templates=true,output_format=yaml \
 		api/service.proto
 
 .PHONY: clone
