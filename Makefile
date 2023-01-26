@@ -22,6 +22,11 @@ protoc:
 		--openapiv2_opt logtostderr=true,use_go_templates=true,output_format=yaml \
 		api/service.proto
 
+.PHONY: sqlboiler
+sqlboiler:
+	make build name=sqlboiler
+	docker run --rm -it -w /workdir -v ${PWD}:/workdir $(shell make image name=sqlboiler)
+
 .PHONY: clone
 clone:
 	@docker run -it --rm -v ${dir}:/git alpine/git clone ${url}
@@ -36,7 +41,7 @@ built:
 
 .PHONY: build
 build:
-	@make built image="${name}" || docker build --no-cache --target "${name}" -t $(shell make image name=${name}) "images/${name}"
+	@make built image="${name}" || docker build --no-cache --target "${name}" -t $(shell make image name=${name}) .
 
 .PHONY: rebuild
 rebuild:
