@@ -7,7 +7,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"grpcrest/gen/pbgen"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
 	"grpcrest/pkg/service"
@@ -27,11 +29,31 @@ func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*REST, erro
 
 	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
 		return hdr, true
+	}), runtime.WithForwardResponseOption(func(ctx context.Context, res http.ResponseWriter, msg proto.Message) error {
+		msg.ProtoReflect().Range(func(d protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+			if d.Name() != "status" {
+				return true
+			}
+
+			i := v.Interface()
+			s, ok := i.(int)
+
+			if !ok {
+				lgr.Error(fmt.Errorf("invalid status field value in grpc response"), map[string]any{
+					"value": i,
+				})
+			} else {
+				res.WriteHeader(s)
+			}
+
+			return false
+		})
+		return nil
 	}))
 
 	mux.Handle("/", rmx)
 
-	err := pbgen.RegisterServiceHandlerFromEndpoint(context.Background(), rmx, cfg.GRPC().Address(), []grpc.DialOption{
+	err := pb.RegisterServiceHandlerFromEndpoint(context.Background(), rmx, cfg.GRPC().Address(), []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	})
 

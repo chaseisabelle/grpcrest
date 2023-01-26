@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
-	"grpcrest/gen/pbgen"
+	"grpcrest/gen/pb"
 	"grpcrest/pkg/logger"
+	"net/http"
 )
 
-type Service pbgen.ServiceServer
+type Service pb.ServiceServer
 
 type service struct {
 	logger logger.Logger
@@ -18,17 +19,27 @@ func New(lgr logger.Logger) (Service, error) {
 	}, nil
 }
 
-func (s *service) Create(ctx context.Context, req *pbgen.CreateRequest) (*pbgen.CreateResponse, error) {
-	return &pbgen.CreateResponse{
-		Id: 1,
+func (s *service) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
+	return &pb.GetResponse{
+		Status: http.StatusOK,
+		Name:   "foo",
 	}, nil
 }
 
-func (s *service) Read(ctx context.Context, req *pbgen.ReadRequest) (*pbgen.ReadResponse, error) {
-	return &pbgen.ReadResponse{
-		Model: &pbgen.Model{
-			Id:   1,
-			Name: "test",
-		},
+func (s *service) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
+	return &pb.PutResponse{
+		Status: http.StatusOK,
+	}, nil
+}
+
+func (s *service) Post(ctx context.Context, req *pb.PostRequest) (*pb.PostResponse, error) {
+	return &pb.PostResponse{
+		Status: http.StatusCreated,
+	}, nil
+}
+
+func (s *service) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	return &pb.DeleteResponse{
+		Status: http.StatusOK,
 	}, nil
 }

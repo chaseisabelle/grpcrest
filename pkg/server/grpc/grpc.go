@@ -6,7 +6,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"grpcrest/gen/pbgen"
+	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
 	"grpcrest/pkg/service"
@@ -24,7 +24,7 @@ func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*GRPC, erro
 	uic := grpc.ChainUnaryInterceptor(auth)
 	srv := grpc.NewServer(uic)
 
-	pbgen.RegisterServiceServer(srv, ser)
+	pb.RegisterServiceServer(srv, ser)
 
 	return &GRPC{
 		server:  srv,

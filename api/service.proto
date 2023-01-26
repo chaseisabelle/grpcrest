@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package service;
+
+option go_package="pb/";
+
+import "google/api/annotations.proto";
+
+service Service {
+  rpc Get (GetRequest) returns (GetResponse) {
+    option (google.api.http) = {
+      get: "/user/{id}"
+    };
+  }
+  rpc Put (PutRequest) returns (PutResponse) {
+    option (google.api.http) = {
+      put: "/user/{id}"
+      body: "*"
+    };
+  }
+  rpc Post (PostRequest) returns (PostResponse) {
+    option (google.api.http) = {
+      post: "/user"
+      body: "*"
+    };
+  }
+  rpc Delete (DeleteRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/user/{id}"
+    };
+  }
+}
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  int64 status = 1;
+  string name = 2;
+}
+
+message PutRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message PutResponse {
+  int64 status = 1;
+}
+
+message PostRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message PostResponse {
+  int64 status = 1;
+}
+
+message DeleteRequest {
+  string id = 1;
+}
+
+message DeleteResponse {
+  int64 status = 1;
+}
