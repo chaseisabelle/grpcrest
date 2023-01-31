@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"grpcrest/gen/pb"
 	"grpcrest/pkg/logger"
-	"net/http"
 )
 
 type Service pb.ServiceServer
@@ -21,25 +22,18 @@ func New(lgr logger.Logger) (Service, error) {
 
 func (s *service) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	return &pb.GetResponse{
-		Status: http.StatusOK,
-		Name:   "foo",
-	}, nil
+		Name: "foo",
+	}, status.Errorf(codes.NotFound, "not found error weee")
 }
 
 func (s *service) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
-	return &pb.PutResponse{
-		Status: http.StatusOK,
-	}, nil
+	return &pb.PutResponse{}, nil
 }
 
 func (s *service) Post(ctx context.Context, req *pb.PostRequest) (*pb.PostResponse, error) {
-	return &pb.PostResponse{
-		Status: http.StatusCreated,
-	}, nil
+	return &pb.PostResponse{}, nil
 }
 
 func (s *service) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
-	return &pb.DeleteResponse{
-		Status: http.StatusOK,
-	}, nil
+	return &pb.DeleteResponse{}, nil
 }

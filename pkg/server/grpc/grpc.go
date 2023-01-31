@@ -6,6 +6,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
@@ -21,7 +22,22 @@ type GRPC struct {
 }
 
 func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*GRPC, error) {
-	uic := grpc.ChainUnaryInterceptor(auth)
+	uic := grpc.ChainUnaryInterceptor(func(ctx context.Context, req any, usi *grpc.UnaryServerInfo, han grpc.UnaryHandler) (any, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+
+		if !ok {
+			md = metadata.New(map[string]string{})
+		}
+
+		res, err := han(ctx, req)
+
+		s := res.(status.Status)
+
+		md.Set("x-http-status-code", )
+
+		grpc.SetHeader(ctx, md)
+	})
+
 	srv := grpc.NewServer(uic)
 
 	pb.RegisterServiceServer(srv, ser)
@@ -93,12 +109,3 @@ func (g *GRPC) Serve(ctx context.Context) error {
 	return err
 }
 
-//--------- @todo move to dedicated package
-
-func auth(ctx context.Context, req any, usi *grpc.UnaryServerInfo, han grpc.UnaryHandler) (any, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-
-	fmt.Printf("intercepted: %+v\n%+v\n", ok, md)
-
-	return han(ctx, req)
-}

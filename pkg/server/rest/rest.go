@@ -6,15 +6,18 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"grpcrest/gen/pb"
 	"grpcrest/pkg/config"
 	"grpcrest/pkg/logger"
 	"grpcrest/pkg/service"
+	"grpcrest/pkg/utility"
 	"net"
 	"net/http"
+	"strconv"
 )
 
 type REST struct {
@@ -27,28 +30,30 @@ type REST struct {
 func New(cfg config.Config, lgr logger.Logger, ser service.Service) (*REST, error) {
 	mux := http.NewServeMux()
 
-	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(func(hdr string) (string, bool) {
-		return hdr, true
-	}), runtime.WithForwardResponseOption(func(ctx context.Context, res http.ResponseWriter, msg proto.Message) error {
-		msg.ProtoReflect().Range(func(d protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-			if d.Name() != "status" {
-				return true
-			}
+	rmx := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(headerMatcher), runtime.WithForwardResponseOption(responseForwarder), runtime.WithErrorHandler(func(ctx context.Context, mux *runtime.ServeMux, mar runtime.Marshaler, res http.ResponseWriter, req *http.Request, err error) {
+		if err == nil {
+			err = status.New(codes.Unknown, "unknown error").Err()
+		}
 
-			i := v.Interface()
-			s, ok := i.(int)
+		s, ok := status.FromError(err)
 
-			if !ok {
-				lgr.Error(fmt.Errorf("invalid status field value in grpc response"), map[string]any{
-					"value": i,
-				})
-			} else {
-				res.WriteHeader(s)
-			}
+		if !ok {
+			s = status.New(codes.Unknown, err.Error())
+		}
 
-			return false
+		c := s.Code()
+		hsc, err := utility.GRPCCodeToHTTPCode(c)
+		
+		if err != nil {
+			lgr.Error(fmt.Errorf("failed to get HTTP status code: %w", err), map[string]any{
+				"code": c,
+			})
+		}
+
+		runtime.DefaultHTTPErrorHandler(ctx, mux, mar, res, req, &runtime.HTTPStatusError{
+			HTTPStatus: hsc,
+			Err:        err,
 		})
-		return nil
 	}))
 
 	mux.Handle("/", rmx)
@@ -139,4 +144,32 @@ func (r *REST) Serve(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func headerMatcher(hdr string) (string, bool) {
+	return hdr, true
+}
+
+func responseForwarder(ctx context.Context, res http.ResponseWriter, msg proto.Message) error {
+	md, ok := runtime.ServerMetadataFromContext(ctx)
+
+	if !ok {
+		return fmt.Errorf("failed to get metadata from context")
+	}
+
+	hdr := md.HeaderMD.Get("x-http-status-code")
+
+	if len(hdr) != 1 {
+		return fmt.Errorf("failed to get x-http-status-code response header")
+	}
+
+	hsc, err := strconv.Atoi(hdr[0])
+
+	if err != nil {
+		return fmt.Errorf("invalid x-http-status-code response header: %s", hdr[0])
+	}
+
+	res.WriteHeader(hsc)
+
+	return nil
 }

@@ -6,29 +6,79 @@ services:
       context: .
       target: service
     image: chaseisabelle/service:local
-    container_name: platform
+    container_name: chaseisabelle-service
   postgres:
     image: postgres:14
-    container_name: postgres
+    container_name: chaseisabelle-postgres
     volumes:
       - postgres:/var/lib/postresql/data
     environment:
-      - POSTGRES_USER=platform
+      - POSTGRES_USER=chaseisabelle
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=platform
+      - POSTGRES_DB=chaseisabelle
     ports:
       - '5432:5432'
   psql:
     image: postgres:14
-    container_name: psql
-    command: psql --host postgres --port 5432 --username platform --dbname platform
+    container_name: chaseisabelle-psql
+    command: |
+      psql 
+      --host chaseisabelle-postgres 
+      --port 5432 
+      --username chaseisabelle 
+      --dbname chaseisabelle
     profiles:
       - donotstart
     depends_on:
       - postgres
+  git:
+    image: alpine/git
+    container_name: chaseisabelle-git
+    working_dir: /workdir
+    volumes:
+      - .:/workdir
+  protoc:
+    build:
+      context: .
+      target: protoc
+    image: chaseisabelle/protoc:local
+    container_name: chaseisabelle-protoc
+    working_dir: /workdir
+    command: |
+      protoc 
+      -I api 
+      -I api/googleapis 
+      -I api/grpc-gateway 
+      --go_out gen/pb 
+      --go_opt paths=source_relative 
+      --go-grpc_out gen/pb 
+      --go-grpc_opt paths=source_relative,require_unimplemented_servers=false 
+      --grpc-gateway_out gen/pb 
+      --grpc-gateway_opt paths=source_relative,generate_unbound_methods=true 
+      --openapiv2_out api 
+      --openapiv2_opt logtostderr=true,use_go_templates=true,output_format=yaml 
+      api/service.proto
+    volumes:
+      - .:/workdir
+  sqlboiler:
+    build:
+      context: .
+      target: sqlboiler
+    image: chaseisabelle/sqlboiler:local
+    container_name: chaseisabelle-sqlboiler
+    working_dir: /workdir
+    command: |
+      sqlboiler 
+      --config sql/sqlboiler.toml 
+      --output gen/db 
+      --pkgname db 
+      --wipe 
+      psql
+    volumes:
+      - .:/workdir
   tester:
     image: golang
-    container_name: tester
+    container_name: chaseisabelle-tester
     working_dir: /workdir
     command: go test -v --race --cover --coverprofile=../coverage.out ./...
     volumes:
@@ -37,7 +87,7 @@ services:
       - donotstart
   coverer:
     image: golang
-    container_name: coverer
+    container_name: chaseisabelle-coverer
     working_dir: /workdir
     command: go tool cover --func=../coverage.out
     volumes:
@@ -46,7 +96,7 @@ services:
       - donotstart
   vetter:
     image: golang
-    container_name: vetter
+    container_name: chaseisabelle-vetter
     working_dir: /workdir
     command: go vet -v --race ./...
     volumes:
